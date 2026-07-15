@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}CreditAI — Compliance Dashboard{% endblock %}
+{% block nav_compliance %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>🔍 Compliance Dashboard</h2>
+  <p class="page-subtitle">
+    Paste a JSON array of applicants to batch-screen for high-risk individuals.
+  </p>
+</div>
+
+<!-- ── Stats Strip ───────────────────────────────────────────────── -->
+<div class="stats-strip" id="statsStrip" style="display:none;">
+  <div class="stat-box stat-total">
+    <span class="stat-num" id="statTotal">0</span>
+    <span class="stat-label">Total Screened</span>
+  </div>
+  <div class="stat-box stat-approved">
+    <span class="stat-num" id="statApproved">0</span>
+    <span class="stat-label">Approved</span>
+  </div>
+  <div class="stat-box stat-highrisk">
+    <span class="stat-num" id="statHighRisk">0</span>
+    <span class="stat-label">High-Risk</span>
+  </div>
+  <div class="stat-box stat-rate">
+    <span class="stat-num" id="statRate">—</span>
+    <span class="stat-label">Approval Rate</span>
+  </div>
+</div>
+
+<!-- ── Input & Controls ──────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <h3 class="card-title">Applicant JSON Input</h3>
+  <p class="hint">
+    Paste an array of applicant objects. Each object must include at minimum:
+    <code>name</code>, <code>age</code>, <code>annual_income</code>,
+    <code>credit_score</code>, <code>debt_to_income_ratio</code>.
+    Click <strong>Load Sample</strong> to try a pre-built set.
+  </p>
+  <div class="textarea-controls">
+    <button class="btn-secondary" id="loadSampleBtn">Load Sample (10 applicants)</button>
+    <button class="btn-secondary" id="clearBtn">Clear</button>
+  </div>
+  <textarea id="batchInput" class="code-textarea" rows="12" placeholder="Paste JSON array here…"></textarea>
+  <button class="btn-primary" id="screenBtn" style="margin-top:1rem;">
+    Run Batch Screening
+  </button>
+</div>
+
+<!-- ── Results Table ─────────────────────────────────────────────── -->
+<div class="card" id="resultsCard" style="display:none;">
+  <h3 class="card-title">Screening Results</h3>
+  <div class="table-wrap">
+    <table class="results-table" id="resultsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Decision</th>
+          <th>Probability</th>
+          <th>Risk Level</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+  <button class="btn-secondary" id="exportBtn" style="margin-top:1rem;">
+    Export Results as CSV
+  </button>
+</div>
+
+<script>
+// ── Sample dataset ─────────────────────────────────────────────────────
+const SAMPLE_APPLICANTS = [
+  { applicant_id:"APP-0001", name:"Alice Johnson",    age:34, annual_income:78000, employment_duration:7,   credit_score:720, debt_to_income_ratio:0.25, existing_loans:1, num_dependents:1, income_type:"employed",     education_level:"bachelor", owns_property:1, owns_car:1, months_since_default:0, has_prior_default:0 },
+  { applicant_id:"APP-0002", name:"Bob Martinez",     age:45, annual_income:42000, employment_duration:12,  credit_score:580, debt_to_income_ratio:0.55, existing_loans:3, num_dependents:3, income_type:"employed",     education_level:"secondary",owns_property:0, owns_car:1, months_since_default:24, has_prior_default:1 },
+  { applicant_id:"APP-0003", name:"Carol Chen",       age:28, annual_income:92000, employment_duration:3,   credit_score:790, debt_to_income_ratio:0.15, existing_loans:0, num_dependents:0, income_type:"employed",     education_level:"master",   owns_property:0, owns_car:0, months_since_default:0, has_prior_default:0 },
+  { applicant_id:"APP-0004", name:"David Kim",        age:52, annual_income:31000, employment_duration:0.5, credit_score:490, debt_to_income_ratio:0.72, existing_loans:4, num_dependents:2, income_type:"self_employed",education_level:"secondary",owns_property:1, owns_car:0, months_since_default:6,  has_prior_default:1 },
+  { applicant_id:"APP-0005", name:"Eva Patel",        age:39, annual_income:115000,employment_duration:9,   credit_score:810, debt_to_income_ratio:0.18, existing_loans:1, num_dependents:2, income_type:"employed",     education_level:"phd",      owns_property:1, owns_car:1, months_since_default:0, has_prior_default:0 },
+  { applicant_id:"APP-0006", name:"Frank Thompson",   age:23, annual_income:22000, employment_duration:1,   credit_score:540, debt_to_income_ratio:0.45, existing_loans:2, num_dependents:0, income_type:"student",      education_level:"bachelor", owns_property:0, owns_car:0, months_since_default:0, has_prior_default:0 },
+  { applicant_id:"APP-0007", name:"Grace Lee",        age:61, annual_income:54000, employment_duration:30,  credit_score:700, debt_to_income_ratio:0.30, existing_loans:0, num_dependents:0, income_type:"pensioner",    education_level:"bachelor", owns_property:1, owns_car:1, months_since_default:0, has_prior_default:0 },
+  { applicant_id:"APP-0008", name:"Henry Osei",       age:36, annual_income:67000, employment_duration:5,   credit_score:620, debt_to_income_ratio:0.40, existing_loans:2, num_dependents:1, income_type:"employed",     education_level:"bachelor", owns_property:0, owns_car:1, months_since_default:36, has_prior_default:1 },
+  { applicant_id:"APP-0009", name:"Isabelle Nguyen",  age:29, annual_income:88000, employment_duration:4,   credit_score:750, debt_to_income_ratio:0.20, existing_loans:1, num_dependents:0, income_type:"employed",     education_level:"master",   owns_property:1, owns_car:0, months_since_default:0, has_prior_default:0 },
+  { applicant_id:"APP-0010", name:"James Okafor",     age:48, annual_income:39000, employment_duration:2,   credit_score:460, debt_to_income_ratio:0.80, existing_loans:5, num_dependents:4, income_type:"self_employed",education_level:"secondary",owns_property:0, owns_car:0, months_since_default:12, has_prior_default:1 },
+];
+
+document.getElementById("loadSampleBtn").addEventListener("click", () => {
+  document.getElementById("batchInput").value = JSON.stringify(SAMPLE_APPLICANTS, null, 2);
+});
+
+document.getElementById("clearBtn").addEventListener("click", () => {
+  document.getElementById("batchInput").value = "";
+  document.getElementById("resultsCard").style.display = "none";
+  document.getElementById("statsStrip").style.display  = "none";
+});
+
+// ── Batch screening ────────────────────────────────────────────────────
+document.getElementById("screenBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("screenBtn");
+  btn.textContent = "Screening…";
+  btn.disabled = true;
+
+  let applicants;
+  try {
+    applicants = JSON.parse(document.getElementById("batchInput").value);
+    if (!Array.isArray(applicants)) throw new Error("Input must be a JSON array.");
+  } catch (err) {
+    alert("JSON parse error: " + err.message);
+    btn.textContent = "Run Batch Screening";
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    const res  = await fetch("/compliance/batch-screen/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ applicants }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    // Stats strip
+    document.getElementById("statTotal").textContent    = data.total;
+    document.getElementById("statApproved").textContent = data.approved;
+    document.getElementById("statHighRisk").textContent = data.high_risk;
+    document.getElementById("statRate").textContent     = ((data.approved / data.total) * 100).toFixed(1) + "%";
+    document.getElementById("statsStrip").style.display = "flex";
+
+    // Results table
+    const tbody = document.getElementById("resultsBody");
+    tbody.innerHTML = "";
+    data.results.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.className = r.prediction === 0 ? "row-highrisk" : "";
+      tr.innerHTML = `
+        <td>${r.applicant_id}</td>
+        <td>${r.name}</td>
+        <td><span class="badge ${r.prediction === 1 ? 'badge-approved' : 'badge-rejected'}">${r.label}</span></td>
+        <td>${(r.probability * 100).toFixed(1)}%</td>
+        <td><span class="risk-tag risk-${r.risk_level}">${r.risk_level}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("resultsCard").style.display = "block";
+
+    // Store for CSV export
+    window._lastResults = data.results;
+
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.textContent = "Run Batch Screening";
+    btn.disabled = false;
+  }
+});
+
+// ── CSV export ─────────────────────────────────────────────────────────
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const rows = window._lastResults || [];
+  if (!rows.length) return;
+  const header = "applicant_id,name,label,probability,risk_level";
+  const csv = [header, ...rows.map(r =>
+    `${r.applicant_id},${r.name},${r.label},${(r.probability * 100).toFixed(2)}%,${r.risk_level}`
+  )].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "screening_results.csv"; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+{% endblock %}

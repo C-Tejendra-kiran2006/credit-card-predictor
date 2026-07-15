@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}CreditAI — Check Your Eligibility{% endblock %}
+{% block nav_customer %}active{% endblock %}
+
+{% block content %}
+<div class="customer-wrap">
+
+  <!-- ── Hero ──────────────────────────────────────────────────── -->
+  <div class="customer-hero">
+    <h2>Check Your Credit Card Eligibility</h2>
+    <p>Fill in your details below and find out if you qualify in seconds. This check does <strong>not</strong> affect your credit score.</p>
+  </div>
+
+  <!-- ── Steps ─────────────────────────────────────────────────── -->
+  <div class="steps">
+    <div class="step active" id="step1Dot"><span>1</span> Your Profile</div>
+    <div class="step-line"></div>
+    <div class="step" id="step2Dot"><span>2</span> Financial Info</div>
+    <div class="step-line"></div>
+    <div class="step" id="step3Dot"><span>3</span> Your Result</div>
+  </div>
+
+  <!-- ── Form ──────────────────────────────────────────────────── -->
+  <div class="card customer-card">
+    <form id="customerForm">
+
+      <!-- Step 1: Personal Profile -->
+      <div class="form-step" id="step1">
+        <h3>Step 1 — Your Profile</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="c_age">Age</label>
+            <input type="number" id="c_age" name="age" min="18" max="80" value="30" required />
+          </div>
+          <div class="form-group">
+            <label for="c_education_level">Education Level</label>
+            <select id="c_education_level" name="education_level">
+              <option value="secondary">Secondary School</option>
+              <option value="bachelor" selected>Bachelor's Degree</option>
+              <option value="master">Master's Degree</option>
+              <option value="phd">PhD</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="c_num_dependents">Number of Dependents</label>
+            <input type="number" id="c_num_dependents" name="num_dependents" min="0" max="10" value="0" />
+          </div>
+          <div class="form-group">
+            <label for="c_income_type">Employment Status</label>
+            <select id="c_income_type" name="income_type">
+              <option value="employed" selected>Employed (Full-time / Part-time)</option>
+              <option value="self_employed">Self-Employed / Freelance</option>
+              <option value="pensioner">Retired / Pensioner</option>
+              <option value="student">Student</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row checkboxes">
+          <label class="checkbox-label">
+            <input type="checkbox" id="c_owns_property" name="owns_property" />
+            <span>I own property</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="c_owns_car" name="owns_car" />
+            <span>I own a car</span>
+          </label>
+        </div>
+        <button type="button" class="btn-primary" onclick="goStep(2)">Next →</button>
+      </div>
+
+      <!-- Step 2: Financial Information -->
+      <div class="form-step hidden" id="step2">
+        <h3>Step 2 — Financial Information</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="c_annual_income">Annual Income (USD)</label>
+            <input type="number" id="c_annual_income" name="annual_income" min="0" value="50000" required />
+          </div>
+          <div class="form-group">
+            <label for="c_employment_duration">Years at Current Job</label>
+            <input type="number" id="c_employment_duration" name="employment_duration"
+                   min="0" max="50" step="0.5" value="3" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="c_credit_score">Your Credit Score (300–850)</label>
+            <input type="number" id="c_credit_score" name="credit_score"
+                   min="300" max="850" value="650" required />
+            <small>Don't know your score? Use an estimate (e.g. 650 = average).</small>
+          </div>
+          <div class="form-group">
+            <label for="c_debt_to_income_ratio">Debt-to-Income Ratio</label>
+            <input type="number" id="c_debt_to_income_ratio" name="debt_to_income_ratio"
+                   min="0" max="1" step="0.01" value="0.30" />
+            <small>Total monthly debt ÷ gross monthly income (e.g. 0.35 = 35%)</small>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="c_existing_loans">Number of Active Loans</label>
+            <input type="number" id="c_existing_loans" name="existing_loans" min="0" max="20" value="0" />
+          </div>
+          <div class="form-group">
+            <label for="c_months_since_default">Months Since Last Default (0 = never)</label>
+            <input type="number" id="c_months_since_default" name="months_since_default" min="0" value="0" />
+          </div>
+        </div>
+        <div class="form-row checkboxes">
+          <label class="checkbox-label">
+            <input type="checkbox" id="c_has_prior_default" name="has_prior_default" />
+            <span>I have a prior default on record</span>
+          </label>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn-secondary" onclick="goStep(1)">← Back</button>
+          <button type="submit" class="btn-primary" id="customerSubmitBtn">Check My Eligibility</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Result -->
+      <div class="form-step hidden" id="step3">
+        <div id="customerResult" class="customer-result"></div>
+        <button type="button" class="btn-secondary" onclick="resetCustomerForm()">Start Over</button>
+      </div>
+
+    </form>
+  </div><!-- /card -->
+
+</div><!-- /customer-wrap -->
+
+<script>
+function goStep(n) {
+  document.querySelectorAll(".form-step").forEach(s => s.classList.add("hidden"));
+  document.getElementById("step" + n).classList.remove("hidden");
+  document.querySelectorAll(".step").forEach((s, i) => {
+    s.classList.toggle("active", i < n);
+  });
+}
+
+document.getElementById("customerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("customerSubmitBtn");
+  btn.textContent = "Checking…";
+  btn.disabled = true;
+
+  const fd = new FormData(e.target);
+  const payload = {};
+  fd.forEach((v, k) => { payload[k] = isNaN(v) ? v : Number(v); });
+  ["owns_property","owns_car","has_prior_default"].forEach(f => {
+    const el = document.getElementById("c_" + f);
+    if (el) payload[f] = el.checked ? 1 : 0;
+  });
+
+  try {
+    const res  = await fetch("/customer/check/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    const resultDiv = document.getElementById("customerResult");
+    const icon  = data.eligible ? "✅" : "❌";
+    const cls   = data.eligible ? "result-eligible" : "result-ineligible";
+    const score = (data.probability * 100).toFixed(1);
+
+    resultDiv.innerHTML = `
+      <div class="result-icon">${icon}</div>
+      <h3 class="${cls}">${data.label}</h3>
+      <p class="result-message">${data.message}</p>
+      <div class="customer-score-bar">
+        <div class="score-fill ${cls}" style="width:${score}%"></div>
+      </div>
+      <p class="score-caption">Eligibility Score: <strong>${score}%</strong> &nbsp;&middot;&nbsp; Risk: <strong>${data.risk_level}</strong></p>
+    `;
+
+    goStep(3);
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.textContent = "Check My Eligibility";
+    btn.disabled = false;
+  }
+});
+
+function resetCustomerForm() {
+  document.getElementById("customerForm").reset();
+  goStep(1);
+}
+</script>
+{% endblock %}

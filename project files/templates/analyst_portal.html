@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}CreditAI — Bank Analyst Portal{% endblock %}
+{% block nav_analyst %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>🏦 Bank Analyst Portal</h2>
+  <p class="page-subtitle">Enter an applicant's financial profile to receive an instant approval decision.</p>
+</div>
+
+<div class="two-col">
+
+  <!-- ── Input Form ──────────────────────────────────────────── -->
+  <div class="card">
+    <h3 class="card-title">Applicant Financial Profile</h3>
+    <form id="analystForm" class="prediction-form">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="age">Age</label>
+          <input type="number" id="age" name="age" min="18" max="80" value="35" required />
+        </div>
+        <div class="form-group">
+          <label for="annual_income">Annual Income (USD)</label>
+          <input type="number" id="annual_income" name="annual_income" min="1000" value="60000" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="employment_duration">Employment Duration (years)</label>
+          <input type="number" id="employment_duration" name="employment_duration"
+                 min="0" max="50" step="0.5" value="5" required />
+        </div>
+        <div class="form-group">
+          <label for="credit_score">Credit Score (300–850)</label>
+          <input type="number" id="credit_score" name="credit_score"
+                 min="300" max="850" value="680" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="debt_to_income_ratio">Debt-to-Income Ratio</label>
+          <input type="number" id="debt_to_income_ratio" name="debt_to_income_ratio"
+                 min="0" max="1" step="0.01" value="0.30" required />
+        </div>
+        <div class="form-group">
+          <label for="existing_loans">Existing Loans (count)</label>
+          <input type="number" id="existing_loans" name="existing_loans" min="0" max="20" value="1" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="num_dependents">Number of Dependents</label>
+          <input type="number" id="num_dependents" name="num_dependents" min="0" max="10" value="0" required />
+        </div>
+        <div class="form-group">
+          <label for="income_type">Income Type</label>
+          <select id="income_type" name="income_type">
+            <option value="employed" selected>Employed</option>
+            <option value="self_employed">Self-Employed</option>
+            <option value="pensioner">Pensioner</option>
+            <option value="student">Student</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="education_level">Education Level</label>
+          <select id="education_level" name="education_level">
+            <option value="secondary">Secondary</option>
+            <option value="bachelor" selected>Bachelor's</option>
+            <option value="master">Master's</option>
+            <option value="phd">PhD</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="months_since_default">Months Since Last Default (0 = none)</label>
+          <input type="number" id="months_since_default" name="months_since_default" min="0" value="0" />
+        </div>
+      </div>
+
+      <div class="form-row checkboxes">
+        <label class="checkbox-label">
+          <input type="checkbox" id="owns_property" name="owns_property" checked />
+          <span>Owns Property</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="owns_car" name="owns_car" />
+          <span>Owns Car</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="has_prior_default" name="has_prior_default" />
+          <span>Prior Default on Record</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        Run Credit Check
+      </button>
+    </form>
+  </div><!-- /card -->
+
+  <!-- ── Result Panel ─────────────────────────────────────────── -->
+  <div class="card result-panel" id="resultPanel" style="display:none;">
+    <h3 class="card-title">Decision</h3>
+
+    <div id="decisionBadge" class="decision-badge"></div>
+
+    <div class="result-details">
+      <div class="result-row">
+        <span class="result-key">Approval Probability</span>
+        <span class="result-val" id="resProb">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">Risk Level</span>
+        <span class="result-val" id="resRisk">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">Model Used</span>
+        <span class="result-val" id="resModel">—</span>
+      </div>
+    </div>
+
+    <!-- Probability bar -->
+    <div class="prob-bar-wrap">
+      <div class="prob-bar-label">
+        <span>High-Risk</span><span>Approved</span>
+      </div>
+      <div class="prob-bar-track">
+        <div class="prob-bar-fill" id="probBarFill"></div>
+      </div>
+    </div>
+
+  </div><!-- /result-panel -->
+
+</div><!-- /two-col -->
+
+<script>
+document.getElementById("analystForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  btn.textContent = "Analysing…";
+  btn.disabled = true;
+
+  const fd = new FormData(e.target);
+  const payload = {};
+  fd.forEach((v, k) => {
+    payload[k] = isNaN(v) ? v : Number(v);
+  });
+  // Checkboxes: override with 1/0
+  ["owns_property", "owns_car", "has_prior_default"].forEach(f => {
+    payload[f] = document.getElementById(f).checked ? 1 : 0;
+  });
+
+  try {
+    const res  = await fetch("/analyst/predict/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error);
+
+    // Show result panel
+    const panel = document.getElementById("resultPanel");
+    panel.style.display = "block";
+
+    const badge = document.getElementById("decisionBadge");
+    badge.textContent  = data.label;
+    badge.className    = "decision-badge " + (data.prediction === 1 ? "approved" : "rejected");
+
+    document.getElementById("resProb").textContent  = (data.probability * 100).toFixed(1) + "%";
+    document.getElementById("resRisk").textContent  = data.risk_level.charAt(0).toUpperCase() + data.risk_level.slice(1);
+    document.getElementById("resModel").textContent = data.model_name;
+
+    // Animate probability bar
+    const fill = document.getElementById("probBarFill");
+    fill.style.width = (data.probability * 100) + "%";
+    fill.style.background = data.prediction === 1 ? "var(--color-success)" : "var(--color-danger)";
+
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.textContent = "Run Credit Check";
+    btn.disabled = false;
+  }
+});
+</script>
+{% endblock %}

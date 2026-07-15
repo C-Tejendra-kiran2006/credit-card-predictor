@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Credit Card Approval Predictor{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="nav-logo">💳</span>
+    <span class="nav-title">CreditAI</span>
+  </div>
+  <div class="nav-links">
+    <a href="{% url 'index' %}"               class="nav-link {% block nav_home %}{% endblock %}">Home</a>
+    <a href="{% url 'analyst_portal' %}"      class="nav-link {% block nav_analyst %}{% endblock %}">Analyst Portal</a>
+    <a href="{% url 'compliance_dashboard' %}" class="nav-link {% block nav_compliance %}{% endblock %}">Compliance</a>
+    <a href="{% url 'customer_portal' %}"     class="nav-link {% block nav_customer %}{% endblock %}">Self-Service</a>
+  </div>
+</nav>
+
+<!-- ── Page Content ─────────────────────────────────────────────── -->
+<main class="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────── -->
+<footer class="footer">
+  <p>CreditAI &mdash; Automated Credit Card Approval Predictor &nbsp;|&nbsp; For demonstration purposes only.</p>
+</footer>
+
+{% load static %}
+<script src="{% static 'js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

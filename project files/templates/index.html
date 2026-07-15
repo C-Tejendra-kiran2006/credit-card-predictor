@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}CreditAI — Home{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-inner">
+    <h1 class="hero-heading">Automated Credit Card<br/>Approval Predictor</h1>
+    <p class="hero-sub">
+      Powered by machine learning &mdash; trained on
+      <strong>Logistic Regression, Random Forest, XGBoost &amp; Decision Tree</strong>
+      classifiers. Selects the best-performing model automatically.
+    </p>
+
+    <!-- Model info badge -->
+    <div class="model-badge">
+      <span class="badge-label">Active Model</span>
+      <span class="badge-value" id="modelName">Loading…</span>
+    </div>
+
+    <!-- Portal cards -->
+    <div class="portal-grid">
+
+      <a href="/analyst/" class="portal-card">
+        <div class="portal-icon">🏦</div>
+        <div class="portal-body">
+          <h3>Bank Analyst Portal</h3>
+          <p>Enter a single applicant's financial profile for an instant approval or rejection decision.</p>
+        </div>
+        <div class="portal-arrow">→</div>
+      </a>
+
+      <a href="/compliance/" class="portal-card">
+        <div class="portal-icon">🔍</div>
+        <div class="portal-body">
+          <h3>Compliance Dashboard</h3>
+          <p>Batch-screen multiple applicants at once to identify high-risk individuals.</p>
+        </div>
+        <div class="portal-arrow">→</div>
+      </a>
+
+      <a href="/customer/" class="portal-card">
+        <div class="portal-icon">👤</div>
+        <div class="portal-body">
+          <h3>Customer Self-Service</h3>
+          <p>A clean, public-facing eligibility check form for prospective card applicants.</p>
+        </div>
+        <div class="portal-arrow">→</div>
+      </a>
+
+    </div><!-- /portal-grid -->
+
+    <!-- Metrics strip -->
+    <div class="metrics-strip" id="metricsStrip" style="display:none;">
+      <div class="metric-item">
+        <span class="metric-num" id="metricAcc">—</span>
+        <span class="metric-label">Accuracy</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-num" id="metricF1">—</span>
+        <span class="metric-label">F1 Score (macro)</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-num" id="metricRoc">—</span>
+        <span class="metric-label">ROC-AUC</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Fetch model metadata from the API endpoint on page load
+fetch("/api/model-info/")
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) return;
+    document.getElementById("modelName").textContent = data.model_name;
+    const m = data.metrics || {};
+    if (m.accuracy) {
+      document.getElementById("metricAcc").textContent  = (m.accuracy * 100).toFixed(1) + "%";
+      document.getElementById("metricF1").textContent   = (m.f1_macro * 100).toFixed(1) + "%";
+      document.getElementById("metricRoc").textContent  = (m.roc_auc  * 100).toFixed(1) + "%";
+      document.getElementById("metricsStrip").style.display = "flex";
+    }
+  })
+  .catch(() => {
+    document.getElementById("modelName").textContent = "Model not loaded — run train.py";
+  });
+</script>
+{% endblock %}
